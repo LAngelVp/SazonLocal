@@ -49,6 +49,37 @@
       {{ business().descripcion || 'Describe brevemente tu propuesta gastronómica, platillos estrella y lo que te hace único.' }}
     </p>
 
+    @if (business().menu) {
+      <button
+        class="card__menu-toggle"
+        type="button"
+        [attr.aria-expanded]="menuExpanded()"
+        (click)="menuExpanded.set(!menuExpanded())"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round" />
+        </svg>
+        <span>{{ menuExpanded() ? 'Ocultar menú' : 'Ver menú y platillos' }}</span>
+        <svg
+          class="card__menu-chevron"
+          [class.is-open]="menuExpanded()"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+
+      @if (menuExpanded()) {
+        <div class="card__menu">
+          <p class="card__menu-content">{{ business().menu }}</p>
+        </div>
+      }
+    }
+
     <div class="card__meta">
       @if (business().horario) {
         <span class="card__meta-item">

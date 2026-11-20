@@ -90,6 +90,7 @@ const apiInfo = (_req, res) => {
       myBusinesses: 'GET /api/businesses/mine',
       createBusiness: 'POST /api/businesses',
       updateBusiness: 'PUT /api/businesses/:id',
+      deleteBusiness: 'DELETE /api/businesses/:id',
       uploadImage: 'POST /api/uploads/image',
     },
   });

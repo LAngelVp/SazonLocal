@@ -279,6 +279,16 @@ ol {
   background: var(--color-surface-muted);
 }
 
+.btn--danger {
+  background: var(--color-danger);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(217, 47, 33, 0.22);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #bd2418;
+}
+
 .btn--ghost {
   background: transparent;
   color: var(--color-text-main);

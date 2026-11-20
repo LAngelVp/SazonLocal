@@ -17,6 +17,7 @@ export class BusinessCardComponent {
   readonly preview = input(false);
 
   readonly imageFailed = signal(false);
+  readonly menuExpanded = signal(false);
   private lastImageUrl = '';
 
   constructor() {

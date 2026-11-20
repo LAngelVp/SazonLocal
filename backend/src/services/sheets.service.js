@@ -40,6 +40,7 @@ const SHEETS = {
       'servicios',
       'estado_publicacion',
       'fecha_creacion',
+      'menu',
     ],
   },
 };
@@ -172,4 +173,64 @@ async function updateRecord(sheetKey, rowNumber, record) {
   }
 }
 
-module.exports = { SHEETS, readSheet, appendRecord, updateRecord };
+/**
+ * Elimina físicamente una fila (no deja filas en blanco).
+ * Usa batchUpdate + deleteDimension sobre el sheetId interno de la pestaña.
+ * @param {'users'|'businesses'} sheetKey
+ * @param {number} rowNumber 1-based incluyendo la fila de encabezados.
+ */
+async function deleteRecord(sheetKey, rowNumber) {
+  const sheet = SHEETS[sheetKey];
+  const sheets = getSheetsClient();
+
+  if (!Number.isInteger(rowNumber) || rowNumber < 2) {
+    throw new ApiError(400, 'Número de fila inválido para eliminar.', 'INVALID_ROW_NUMBER');
+  }
+
+  try {
+    const metadata = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets(properties(sheetId,title))',
+    });
+
+    const target = (metadata.data.sheets || []).find(
+      (item) => item.properties?.title === sheet.name
+    );
+
+    if (target?.properties?.sheetId === undefined || target?.properties?.sheetId === null) {
+      throw new ApiError(
+        500,
+        `No se encontró la pestaña "${sheet.name}" en el spreadsheet.`,
+        'SHEET_NOT_FOUND'
+      );
+    }
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: target.properties.sheetId,
+                dimension: 'ROWS',
+                startIndex: rowNumber - 1,
+                endIndex: rowNumber,
+              },
+            },
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      502,
+      `No se pudo eliminar la fila ${rowNumber} de la pestaña "${sheet.name}".`,
+      'SHEETS_DELETE_ERROR',
+      { reason: error.message }
+    );
+  }
+}
+
+module.exports = { SHEETS, readSheet, appendRecord, updateRecord, deleteRecord };

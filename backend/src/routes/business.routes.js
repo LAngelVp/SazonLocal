@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { list, mine, create, update, cacheStatus } = require('../controllers/business.controller');
+const { list, mine, create, update, remove, cacheStatus } = require('../controllers/business.controller');
 const { verifyToken } = require('../middlewares/verifyToken');
 
 const router = Router();
@@ -14,5 +14,6 @@ router.get('/cache-status', cacheStatus);
 router.get('/mine', verifyToken, mine);
 router.post('/', verifyToken, create);
 router.put('/:id', verifyToken, update);
+router.delete('/:id', verifyToken, remove);
 
 module.exports = router;

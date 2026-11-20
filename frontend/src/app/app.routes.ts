@@ -19,6 +19,22 @@ export const routes: Routes = [
       import('./features/business-form/business-form.component').then((m) => m.BusinessFormComponent),
   },
   {
+    path: 'mi-panel',
+    title: 'Mis negocios · SazónLocal',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/my-businesses/my-businesses.component').then(
+        (m) => m.MyBusinessesComponent
+      ),
+  },
+  {
+    path: 'mi-panel/editar/:id',
+    title: 'Editar negocio · SazónLocal',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/business-form/business-form.component').then((m) => m.BusinessFormComponent),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

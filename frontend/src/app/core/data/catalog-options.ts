@@ -24,6 +24,9 @@ export const FOOD_TYPES = [
 
 export const PRICE_RANGES = ['$', '$$', '$$$'] as const;
 
+/** Regla de negocio compartida con el backend. */
+export const MAX_BUSINESSES_PER_USER = 5;
+
 export const SERVICES = ['Comedor', 'Para llevar', 'A domicilio'] as const;
 
 export const PRICE_LABELS: Record<string, string> = {

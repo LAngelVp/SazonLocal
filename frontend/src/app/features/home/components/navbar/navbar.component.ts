@@ -1,6 +1,7 @@
 import { Component, HostListener, inject, model, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
+import { BusinessService } from '../../../../core/services/business.service';
 
 /**
  * Barra superior fija: logotipo, buscador en tiempo real y controles de sesión.
@@ -14,6 +15,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 })
 export class NavbarComponent {
   readonly auth = inject(AuthService);
+  readonly businessService = inject(BusinessService);
   private readonly router = inject(Router);
 
   /** Two-way binding con el término de búsqueda del catálogo. */
@@ -39,6 +41,7 @@ export class NavbarComponent {
 
   requestBusiness(): void {
     this.menuOpen.set(false);
+    if (this.businessService.limitReached()) return;
     this.businessRequested.emit();
   }
 

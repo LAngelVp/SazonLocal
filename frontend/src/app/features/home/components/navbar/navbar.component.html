@@ -27,12 +27,30 @@
     </div>
 
     <div class="actions">
-      <button class="btn btn--primary btn--sm cta" type="button" (click)="requestBusiness()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-          <path d="M12 5v14M5 12h14" stroke-linecap="round" />
-        </svg>
-        <span class="cta__full">Registrar negocio</span>
-        <span class="cta__short">Registrar</span>
+      <button
+        class="btn btn--primary btn--sm cta"
+        type="button"
+        (click)="requestBusiness()"
+        [disabled]="auth.isAuthenticated() && businessService.limitReached()"
+        [attr.title]="
+          auth.isAuthenticated() && businessService.limitReached()
+            ? 'Has alcanzado el límite de 5 negocios registrados'
+            : null
+        "
+      >
+        @if (auth.isAuthenticated() && businessService.limitReached()) {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span class="cta__full">Cupo completo (5/5)</span>
+          <span class="cta__short">5/5</span>
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+          </svg>
+          <span class="cta__full">Registrar negocio</span>
+          <span class="cta__short">Registrar</span>
+        }
       </button>
 
       @if (auth.isAuthenticated()) {
@@ -56,8 +74,32 @@
               <div class="dropdown__header">
                 <p class="dropdown__name">{{ auth.user()?.nombre_completo }}</p>
                 <p class="dropdown__email">{{ auth.user()?.email }}</p>
+                <p class="dropdown__quota">
+                  {{ businessService.myBusinessCount() }} de
+                  {{ businessService.maxBusinesses }} negocios registrados
+                </p>
               </div>
-              <button class="dropdown__item" type="button" role="menuitem" (click)="requestBusiness()">
+              <a
+                class="dropdown__item"
+                routerLink="/mi-panel"
+                role="menuitem"
+                (click)="menuOpen.set(false)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round" />
+                </svg>
+                Mis negocios
+                <span class="dropdown__count">
+                  {{ businessService.myBusinessCount() }}/{{ businessService.maxBusinesses }}
+                </span>
+              </a>
+              <button
+                class="dropdown__item"
+                type="button"
+                role="menuitem"
+                (click)="requestBusiness()"
+                [disabled]="businessService.limitReached()"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M3 10h18M5 10V7l1-3h12l1 3v3M5 10v9h14v-9" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>

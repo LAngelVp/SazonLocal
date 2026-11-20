@@ -4,11 +4,11 @@
       <a class="brand" routerLink="/" aria-label="SazónLocal, volver al catálogo">
         <img src="assets/logo-horizontal.png" alt="SazónLocal" class="brand__logo" />
       </a>
-      <a class="btn btn--ghost btn--sm back-link" routerLink="/">
+      <a class="btn btn--ghost btn--sm back-link" [routerLink]="isEdit() ? '/mi-panel' : '/'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M19 12H5M11 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        Volver al catálogo
+        {{ isEdit() ? 'Volver a mi panel' : 'Volver al catálogo' }}
       </a>
     </div>
   </header>
@@ -23,11 +23,11 @@
           </svg>
         </span>
         <span class="eyebrow">¡Listo!</span>
-        <h1 class="success-panel__title">Tu negocio ya forma parte de SazónLocal</h1>
+        <h1 class="success-panel__title">{{ isEdit() ? 'Tu negocio se actualizó correctamente' : 'Tu negocio ya forma parte de SazónLocal' }}</h1>
         <p class="success-panel__text">
           @if (created.estado_publicacion === 'APROBADO') {
-            <strong>{{ created.nombre_negocio }}</strong> ya está publicado y visible en el catálogo
-            para que más clientes lo descubran.
+            <strong>{{ created.nombre_negocio }}</strong>
+            {{ isEdit() ? 'ya muestra los cambios en el catálogo.' : 'ya está publicado y visible en el catálogo para que más clientes lo descubran.' }}
           } @else {
             <strong>{{ created.nombre_negocio }}</strong> quedó registrado. Nuestro equipo lo revisará
             antes de publicarlo en el catálogo.
@@ -39,29 +39,87 @@
         </div>
 
         <div class="success-panel__actions">
-          <a class="btn btn--primary" routerLink="/">Ver el catálogo</a>
-          <button class="btn btn--secondary" type="button" (click)="startAnother()">
-            Registrar otro negocio
-          </button>
+          @if (isEdit()) {
+            <a class="btn btn--primary" routerLink="/mi-panel">Volver a mi panel</a>
+            <a class="btn btn--secondary" routerLink="/">Ver el catálogo</a>
+          } @else {
+            <a class="btn btn--primary" routerLink="/">Ver el catálogo</a>
+            <button
+              class="btn btn--secondary"
+              type="button"
+              (click)="startAnother()"
+              [disabled]="businessService.limitReached()"
+            >
+              Registrar otro negocio
+            </button>
+          }
         </div>
       </section>
     } @else {
+      @if (!isEdit() && businessService.myLoading() && !businessService.myLoaded()) {
+        <section class="gate-panel">
+          <span class="spinner spinner--dark" aria-hidden="true"></span>
+          <p>Verificando tu cupo de negocios…</p>
+        </section>
+      } @else if (!isEdit() && businessService.limitReached()) {
+        <!-- ================= Límite alcanzado ================= -->
+        <section class="limit-panel">
+          <span class="limit-panel__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3 2.5 20h19L12 3Z" stroke-linejoin="round" />
+              <path d="M12 9v5M12 17.2v.3" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span class="eyebrow">Cupo completo</span>
+          <h1 class="limit-panel__title">Ya tienes {{ maxBusinesses }} negocios registrados</h1>
+          <p class="limit-panel__text">
+            Has alcanzado el límite máximo de {{ maxBusinesses }} negocios registrados por usuario.
+            Puedes editar o eliminar uno de tus negocios desde tu panel para liberar un espacio.
+          </p>
+          <div class="quota quota--large">
+            <div class="quota__top">
+              <span>{{ businessService.myBusinessCount() }} / {{ maxBusinesses }} negocios registrados</span>
+              <strong>100%</strong>
+            </div>
+            <div class="quota__bar"><span style="width: 100%"></span></div>
+          </div>
+          <div class="limit-panel__actions">
+            <a class="btn btn--primary" routerLink="/mi-panel">Ir a mi panel</a>
+            <a class="btn btn--secondary" routerLink="/">Ver el catálogo</a>
+          </div>
+        </section>
+      } @else {
       <!-- ================= Formulario ================= -->
       <section class="form-panel">
         <header class="page-head">
           <span class="eyebrow">
             <span class="eyebrow__dot" aria-hidden="true"></span>
-            Publicación gratuita
+            {{ isEdit() ? 'Edición de negocio' : 'Publicación gratuita' }}
           </span>
-          <h1 class="page-head__title">Registra tu negocio</h1>
+          <h1 class="page-head__title">{{ isEdit() ? 'Edita tu negocio' : 'Registra tu negocio' }}</h1>
           <p class="page-head__text">
-            @if (auth.firstName()) {
+            @if (isEdit()) {
+              Actualiza la información de <strong>{{ form.controls.nombre_negocio.value }}</strong>
+              y guarda los cambios. La vista previa se actualiza en tiempo real.
+            } @else if (auth.firstName()) {
               Hola, <strong>{{ auth.firstName() }}</strong>. Completa la información y mira tu
               tarjeta tomar forma en tiempo real.
             } @else {
               Completa la información y mira tu tarjeta tomar forma en tiempo real.
             }
           </p>
+
+          <div class="quota">
+            <div class="quota__top">
+              <span>{{ businessService.myBusinessCount() }} / {{ maxBusinesses }} negocios registrados</span>
+              <strong>{{ businessService.remainingSlots() }} disponibles</strong>
+            </div>
+            <div class="quota__bar">
+              <span
+                [style.width.%]="(businessService.myBusinessCount() / maxBusinesses) * 100"
+              ></span>
+            </div>
+          </div>
         </header>
 
         @if (errorMessage()) {
@@ -191,6 +249,30 @@
                   </span>
                 } @else {
                   <span class="field-hint">Mínimo 20 caracteres. Aparecerá en tu tarjeta.</span>
+                }
+              </div>
+
+              <div class="field field--full">
+                <div class="label-row">
+                  <label class="label" for="menu">
+                    Menú y platillos <span class="label__optional">(opcional)</span>
+                  </label>
+                  <span class="counter">{{ form.controls.menu.value.length }}/1500</span>
+                </div>
+                <textarea
+                  id="menu"
+                  class="textarea textarea--menu"
+                  formControlName="menu"
+                  maxlength="1500"
+                  placeholder="Ej. Menú del día&#10;- Tacos al pastor · $45&#10;- Quesadillas de queso · $35&#10;- Agua fresca · $20"
+                  [class.is-invalid]="isInvalid('menu')"
+                ></textarea>
+                @if (isInvalid('menu')) {
+                  <span class="field-error">El menú no puede exceder los 1500 caracteres.</span>
+                } @else {
+                  <span class="field-hint">
+                    Escribe platillos, precios o el menú del día. Se mostrarán respetando los saltos de línea.
+                  </span>
                 }
               </div>
 
@@ -415,16 +497,24 @@
             <p class="submit-bar__note">
               Los campos con * son obligatorios. Al enviar aceptas que la información sea visible
               en el directorio.
+              @if (!isEdit()) {
+                Te quedan <strong>{{ businessService.remainingSlots() }}</strong> de
+                {{ maxBusinesses }} espacios disponibles.
+              }
             </p>
-            <button class="btn btn--primary btn--lg submit-bar__btn" type="submit" [disabled]="submitting()">
+            <button
+              class="btn btn--primary btn--lg submit-bar__btn"
+              type="submit"
+              [disabled]="submitting() || (!isEdit() && businessService.limitReached())"
+            >
               @if (submitting()) {
                 <span class="spinner" aria-hidden="true"></span>
-                Publicando…
+                {{ isEdit() ? 'Guardando…' : 'Publicando…' }}
               } @else {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M20 4 3 11l7 2 2 7 8-16Z" stroke-linejoin="round" />
                 </svg>
-                Publicar mi negocio
+                {{ isEdit() ? 'Guardar cambios' : 'Publicar mi negocio' }}
               }
             </button>
           </div>
@@ -448,10 +538,12 @@
           <ul>
             <li>Usa una foto horizontal, bien iluminada y de tu platillo estrella.</li>
             <li>Escribe una descripción concreta: qué vendes y qué te hace único.</li>
+            <li>Agrega tu menú con precios para que el cliente llegue con todo claro.</li>
             <li>Confirma tu WhatsApp con lada del país para recibir pedidos.</li>
           </ul>
         </div>
       </aside>
+      }
     }
   </main>
 </div>

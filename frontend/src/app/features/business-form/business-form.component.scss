@@ -604,6 +604,128 @@
   margin-top: 1.5rem;
 }
 
+/* ---------- Cupo de negocios ---------- */
+.quota {
+  margin-top: 1.1rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.quota__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.quota__top strong {
+  color: var(--color-text-main);
+  font-weight: 700;
+}
+
+.quota__bar {
+  height: 6px;
+  margin-top: 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-alt);
+  overflow: hidden;
+}
+
+.quota__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));
+  transition: width var(--transition-base);
+}
+
+.quota--large {
+  width: min(100%, 420px);
+  margin: 1.3rem auto 0;
+  text-align: left;
+}
+
+.textarea--menu {
+  min-height: 160px;
+  font-family: var(--font-sans);
+}
+
+/* ---------- Gates / límite ---------- */
+.gate-panel,
+.limit-panel {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 660px;
+  margin: 1.5rem auto;
+  padding: clamp(1.75rem, 4vw, 3rem);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  animation: fade-up 260ms var(--transition-base) both;
+}
+
+.gate-panel {
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.limit-panel__icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.limit-panel__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.limit-panel .eyebrow {
+  background: var(--color-warning-soft);
+  border-color: transparent;
+  color: var(--color-warning);
+}
+
+.limit-panel__title {
+  max-width: 22ch;
+  margin-top: 0.75rem;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.limit-panel__text {
+  max-width: 52ch;
+  margin-top: 0.5rem;
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.limit-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+}
+
 /* ============================================================
    Responsive
    ============================================================ */

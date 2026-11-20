@@ -1,6 +1,6 @@
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BusinessCardComponent } from '../home/components/business-card/business-card.component';
 import { AuthService } from '../../core/services/auth.service';
@@ -9,6 +9,7 @@ import { ToastService } from '../../core/services/toast.service';
 import {
   BUSINESS_TYPES,
   FOOD_TYPES,
+  MAX_BUSINESSES_PER_USER,
   PRICE_RANGES,
   PRICE_LABELS,
   SERVICES,
@@ -30,8 +31,14 @@ import { getApiErrorMessage } from '../../core/utils/http-error';
 export class BusinessFormComponent implements OnInit, OnDestroy {
   private readonly fb = inject(NonNullableFormBuilder);
   readonly auth = inject(AuthService);
-  private readonly businessService = inject(BusinessService);
+  readonly businessService = inject(BusinessService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+
+  readonly maxBusinesses = MAX_BUSINESSES_PER_USER;
+  readonly editId = signal<string | null>(this.route.snapshot.paramMap.get('id'));
+  readonly isEdit = computed(() => this.editId() !== null);
+  private prefillApplied = false;
 
   readonly businessTypes = BUSINESS_TYPES;
   readonly foodTypes = FOOD_TYPES;
@@ -56,6 +63,7 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
       '',
       [Validators.required, Validators.minLength(20), Validators.maxLength(700)],
     ],
+    menu: ['', [Validators.maxLength(1500)]],
     rango_precios: ['$$', [Validators.required]],
     horario: ['', [Validators.required, Validators.maxLength(160)]],
     whatsapp_telefono: [
@@ -82,6 +90,7 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
       tipo_negocio: value.tipo_negocio ?? '',
       tipo_comida: value.tipo_comida ?? '',
       descripcion: value.descripcion ?? '',
+      menu: value.menu ?? '',
       rango_precios: value.rango_precios ?? '',
       horario: value.horario ?? '',
       whatsapp_telefono: value.whatsapp_telefono ?? '',
@@ -95,7 +104,33 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
 
   readonly imageUrl = computed(() => this.rawValue().url_imagen ?? '');
 
+  constructor() {
+    // Precarga el negocio cuando se edita desde el panel.
+    effect(() => {
+      const id = this.editId();
+      if (!id || this.prefillApplied) return;
+
+      const found = this.businessService
+        .myBusinesses()
+        .find((business) => business.id_negocio === id);
+
+      if (found) {
+        this.prefillApplied = true;
+        this.patchBusiness(found);
+        return;
+      }
+
+      if (this.businessService.myLoaded() && !this.businessService.myLoading()) {
+        this.prefillApplied = true;
+        this.errorMessage.set(
+          'No encontramos ese negocio entre tus registros. Vuelve a tu panel e inténtalo de nuevo.'
+        );
+      }
+    });
+  }
+
   ngOnInit(): void {
+    this.businessService.loadMine(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -190,6 +225,13 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
   submit(): void {
     if (this.submitting()) return;
 
+    if (!this.isEdit() && this.businessService.limitReached()) {
+      this.errorMessage.set(
+        `Has alcanzado el límite máximo de ${this.maxBusinesses} negocios registrados por usuario.`
+      );
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.errorMessage.set('Revisa los campos marcados en rojo antes de continuar.');
@@ -208,6 +250,7 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
       tipo_negocio: value.tipo_negocio,
       tipo_comida: value.tipo_comida,
       descripcion: value.descripcion.trim(),
+      menu: value.menu.trim(),
       rango_precios: value.rango_precios,
       horario: value.horario.trim(),
       whatsapp_telefono: value.whatsapp_telefono.trim(),
@@ -216,17 +259,31 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
       servicios: this.selectedServices().join(', '),
     };
 
-    this.businessService.create(payload).subscribe({
+    const editId = this.editId();
+    const request$ = editId
+      ? this.businessService.update(editId, payload)
+      : this.businessService.create(payload);
+
+    request$.subscribe({
       next: (business) => {
         this.submitting.set(false);
         this.success.set(business);
-        this.resetForm();
+
+        if (!editId) this.resetForm();
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        this.toast.success('¡Tu negocio se registró correctamente!');
+        this.toast.success(
+          editId ? 'Tu negocio se actualizó correctamente.' : '¡Tu negocio se registró correctamente!'
+        );
       },
       error: (error: unknown) => {
         this.submitting.set(false);
-        this.errorMessage.set(getApiErrorMessage(error, 'No pudimos registrar tu negocio.'));
+        this.errorMessage.set(
+          getApiErrorMessage(
+            error,
+            editId ? 'No pudimos actualizar tu negocio.' : 'No pudimos registrar tu negocio.'
+          )
+        );
       },
     });
   }
@@ -237,6 +294,32 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  private patchBusiness(business: Business): void {
+    this.form.patchValue({
+      nombre_negocio: business.nombre_negocio ?? '',
+      localidad: business.localidad ?? '',
+      colonia_direccion: business.colonia_direccion ?? '',
+      tipo_negocio: business.tipo_negocio ?? '',
+      tipo_comida: business.tipo_comida ?? '',
+      descripcion: business.descripcion ?? '',
+      menu: business.menu ?? '',
+      rango_precios: business.rango_precios ?? '$$',
+      horario: business.horario ?? '',
+      whatsapp_telefono: business.whatsapp_telefono ?? '',
+      url_imagen: business.url_imagen ?? '',
+      enlace_maps: business.enlace_maps ?? '',
+    });
+
+    this.selectedServices.set(
+      (business.servicios ?? '')
+        .split(',')
+        .map((service) => service.trim())
+        .filter(Boolean)
+    );
+
+    this.form.markAsPristine();
+  }
+
   private resetForm(): void {
     this.form.reset({
       nombre_negocio: '',
@@ -245,6 +328,7 @@ export class BusinessFormComponent implements OnInit, OnDestroy {
       tipo_negocio: '',
       tipo_comida: '',
       descripcion: '',
+      menu: '',
       rango_precios: '$$',
       horario: '',
       whatsapp_telefono: '',

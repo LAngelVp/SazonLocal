@@ -9,11 +9,14 @@ Angular + Express + Google Sheets, desplegado como sitio estático + Serverless 
 
 ## 1. Características
 
-- **Catálogo público** de negocios aprobados, con búsqueda instantánea por nombre, platillo, descripción o zona.
+- **Catálogo público** de negocios aprobados, con búsqueda instantánea por nombre, platillo, descripción, menú o zona.
 - **Filtros en cliente** por localidad, tipo de negocio, tipo de comida, rango de precios y servicios.
 - **Diseño responsive**: sidebar de filtros en escritorio y drawer deslizable en móvil.
 - **Autenticación JWT** (24 h) con contraseñas encriptadas con bcrypt (10 rondas).
-- **Registro de negocios** protegido, con previsualización en vivo de la tarjeta.
+- **Registro y edición de negocios** protegidos, con previsualización en vivo de la tarjeta.
+- **Panel "Mis negocios"**: cupo usado (2/5), edición y eliminación con confirmación.
+- **Límite de 5 negocios por usuario**, validado en cliente y servidor.
+- **Menú / platillos** (hasta 1500 caracteres) visible en una tarjeta expandible del catálogo.
 - **Google Sheets como base de datos**, con caché en memoria de 30 s para cuidar la cuota de lectura.
 - **WhatsApp y Google Maps** directos desde cada tarjeta.
 - **Subida opcional de imágenes a ImgBB** (si configuras la API key) o simplemente pegando una URL.
@@ -70,7 +73,8 @@ sazonLocal/
 │           ├── features/
 │           │   ├── home/        # Navbar, sidebar, cards y catálogo
 │           │   ├── auth/        # Modal login / registro
-│           │   └── business-form/
+│           │   ├── business-form/ # Crear y editar negocio + preview
+│           │   └── my-businesses/ # Panel, cupo, edición y borrado
 │           └── shared/
 ├── vercel.json
 ├── package.json                 # Workspaces + script de build
@@ -122,14 +126,24 @@ Los colores se controlan desde un único bloque `:root`; cámbialos ahí y toda 
 | --- | --- | --- | --- | --- | --- | --- |
 | `id_usuario` | `nombre_completo` | `email` | `password_hash` | `telefono` | `fecha_registro` | `activo` |
 
-**Negocios**
+**Negocios** (17 columnas)
 
-| A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `id_negocio` | `id_usuario` | `nombre_negocio` | `localidad` | `colonia_direccion` | `tipo_negocio` | `tipo_comida` | `descripcion` | `rango_precios` | `horario` | `whatsapp_telefono` | `url_imagen` | `enlace_maps` | `servicios` | `estado_publicacion` | `fecha_creacion` |
+| A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `id_negocio` | `id_usuario` | `nombre_negocio` | `localidad` | `colonia_direccion` | `tipo_negocio` | `tipo_comida` | `descripcion` | `rango_precios` | `horario` | `whatsapp_telefono` | `url_imagen` | `enlace_maps` | `servicios` | `estado_publicacion` | `fecha_creacion` | `menu` |
 
 > El backend valida los encabezados al leer. Si falta alguno, responde con un error indicando cuál.
 > Deja las filas siguientes vacías: la app agrega registros automáticamente.
+
+#### Migración de un Sheet existente (agregar `menu`)
+
+Si ya tenías la pestaña `Negocios` con 16 columnas (A–P), **no reordenes nada**. Solo agrega una columna al final:
+
+1. Escribe `menu` exactamente en la celda **Q1**.
+2. Deja **Q2 en adelante vacío**; las filas existentes seguirán funcionando con menú vacío.
+3. Si tu hoja tiene datos más allá de la columna P, inserta la columna Q antes de esos datos para no desplazarlos.
+
+`id_usuario` (columna B) **es el ownerId** del negocio: no hace falta una columna nueva. Es el campo que el backend compara con el `id_usuario` del JWT para permitir editar o eliminar.
 
 ### 4.2 Crear la Service Account
 
@@ -258,9 +272,60 @@ Base: `/api`
 | `GET` | `/auth/me` | Bearer | Devuelve el usuario del token. |
 | `GET` | `/businesses` | — | Negocios `APROBADO` con caché de 30 s. |
 | `GET` | `/businesses/mine` | Bearer | Negocios del usuario (incluye pendientes). |
-| `POST` | `/businesses` | Bearer | Crea un negocio con estado configurable. |
+| `POST` | `/businesses` | Bearer | Crea un negocio (máximo 5 por usuario). |
 | `PUT` | `/businesses/:id` | Bearer | Edita un negocio propio. |
+| `DELETE` | `/businesses/:id` | Bearer | Elimina un negocio propio y borra su fila del Sheet. |
 | `POST` | `/uploads/image` | Bearer | Sube imagen a ImgBB (opcional). |
+
+### Reglas de validación del negocio
+
+**Campos obligatorios** (backend y formulario):
+
+| Campo | Regla |
+| --- | --- |
+| `nombre_negocio` | Obligatorio, 3–120 caracteres. |
+| `tipo_negocio` | Obligatorio, catálogo permitido. |
+| `tipo_comida` | Obligatorio, catálogo permitido. |
+| `localidad` | Obligatoria, hasta 80 caracteres. |
+| `colonia_direccion` | Obligatoria (dirección/ubicación), hasta 200 caracteres. |
+| `descripcion` | Obligatoria, 20–700 caracteres. |
+| `horario` | Obligatorio, hasta 160 caracteres. |
+| `whatsapp_telefono` | Obligatorio, 10–15 dígitos con lada del país. |
+| `menu` | Opcional, máximo 1500 caracteres. |
+
+Otros errores de negocio:
+
+| Código | HTTP | Cuándo ocurre |
+| --- | --- | --- |
+| `BUSINESS_LIMIT_REACHED` | 400 | El usuario ya tiene 5 negocios: *"Has alcanzado el límite máximo de 5 negocios registrados por usuario."* |
+| `FORBIDDEN` | 403 | Intenta editar o eliminar un negocio de otro usuario. |
+| `BUSINESS_NOT_FOUND` | 404 | El `id_negocio` no existe. |
+| `MENU_TOO_LONG` | 400 | El menú supera 1500 caracteres. |
+
+### Flujo de eliminación
+
+1. El usuario entra a **Mis negocios** (`/mi-panel`) desde el menú de su cuenta.
+2. Pulsa **Eliminar** en una ficha propia y confirma en el diálogo.
+3. El frontend envía `DELETE /api/businesses/:id` con el JWT.
+4. El backend compara `id_usuario` del negocio contra el `id` del token: si no coincide, responde `403`.
+5. Si coincide, usa `spreadsheets.batchUpdate` + `deleteDimension` para **eliminar físicamente la fila** (sin dejar huecos).
+6. Se invalida el caché del catálogo y la tarjeta desaparece del panel.
+
+### Límite de negocios
+
+- Se cuentan **todos** los negocios del usuario, sin importar su estado (`APROBADO`, `PENDIENTE` o `RECHAZADO`).
+- El servidor rechaza la creación número 6 con `400 BUSINESS_LIMIT_REACHED`.
+- El frontend muestra el cupo (`2 / 5 negocios registrados`), deshabilita el CTA y bloquea el formulario al llegar a 5.
+- Al eliminar un negocio se libera un espacio de inmediato.
+
+### Rutas del frontend
+
+| Ruta | Descripción |
+| --- | --- |
+| `/` | Catálogo público, filtros y tarjetas expandibles con menú. |
+| `/registrar-negocio` | Formulario de creación (protegido; bloqueado si el cupo está lleno). |
+| `/mi-panel` | Panel de negocios del usuario, cupo y acciones. |
+| `/mi-panel/editar/:id` | Edición de un negocio propio (protegido). |
 
 ### Ejemplos
 
@@ -286,6 +351,7 @@ curl -X POST http://localhost:3000/api/businesses \
     "tipo_negocio":"Restaurante",
     "tipo_comida":"Mexicana",
     "descripcion":"Tacos al pastor, quesadillas y salsas de la casa.",
+    "menu":"Menú del día\n- Tacos al pastor · $45\n- Quesadillas · $35\n- Agua fresca · $20",
     "rango_precios":"$",
     "horario":"Lun a Sáb, 9:00 – 21:00",
     "whatsapp_telefono":"5213312345678",
@@ -293,6 +359,16 @@ curl -X POST http://localhost:3000/api/businesses \
     "enlace_maps":"https://maps.app.goo.gl/ejemplo",
     "servicios":"Comedor, Para llevar"
   }'
+
+# Editar negocio propio
+curl -X PUT http://localhost:3000/api/businesses/NEG-XXXX \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -d '{"menu":"Nuevo menú del día\n- Tostadas · $40"}'
+
+# Eliminar negocio propio (borra la fila del Sheet)
+curl -X DELETE http://localhost:3000/api/businesses/NEG-XXXX \
+  -H "Authorization: Bearer TU_TOKEN"
 ```
 
 Todas las respuestas de error siguen el formato:
@@ -390,9 +466,16 @@ Las variables de entorno se aplican en un **nuevo deployment**. Cambia una varia
 
 - El listado público se cachea **en memoria 30 s** (`BUSINESSES_CACHE_TTL_MS`).
 - Cada instancia tibia de la función conserva su caché.
-- Crear o editar un negocio invalida el caché de esa instancia.
+- Crear, editar o eliminar un negocio invalida el caché de esa instancia.
 - Diagnóstico: `GET /api/businesses/cache-status`.
 - Para forzar lectura fresca (sin caché): `GET /api/businesses?refresh=true`.
+
+### Menú / platillos
+
+- Se guarda en la columna `menu` (Q) como texto plano.
+- Acepta saltos de línea y un máximo de 1500 caracteres.
+- En el catálogo, la tarjeta muestra un botón **"Ver menú y platillos"** que expande el contenido con `white-space: pre-line`.
+- En el panel también puede consultarse dentro de cada ficha.
 
 ### Límites de Google Sheets API
 
@@ -407,9 +490,11 @@ Las variables de entorno se aplican en un **nuevo deployment**. Cambia una varia
 - Contraseñas con **bcrypt**, 10 salt rounds. Nunca se devuelven al cliente.
 - JWT firmado con `JWT_SECRET`, expiración 24 h, issuer `sazon-local`.
 - Rutas de escritura protegidas por `verifyToken`.
-- Un usuario solo puede editar sus propios negocios (validación de `id_usuario`).
+- Un usuario solo puede editar o **eliminar** sus propios negocios (validación de `id_usuario` = ownerId del JWT).
+- Límite de **5 negocios por usuario** aplicado en el servidor; el frontend solo refleja el cupo.
+- Al eliminar se usa `batchUpdate` + `deleteDimension`, sin dejar filas vacías.
 - CORS restringido por `CORS_ORIGIN`; en desarrollo se permiten `localhost`.
-- Validación y normalización de todos los campos en servidor (tipos, precios, URLs, teléfono).
+- Validación y normalización de todos los campos en servidor (tipos, precios, URLs, teléfono, menú).
 - El listado público **no** expone `id_usuario` ni datos de contacto de la cuenta.
 - Límite de body JSON de 8 MB (suficiente para imágenes base64 y acotado).
 - Errores internos no filtran stack traces en producción.
@@ -430,6 +515,10 @@ Las variables de entorno se aplican en un **nuevo deployment**. Cambia una varia
 | `403 The caller does not have permission` | La API key no tiene acceso al Sheet | Comparte el Sheet y verifica el ID. |
 | Las imágenes subidas fallan | `IMGBB_API_KEY` vacía | Pega la URL de la imagen manualmente o configura la key. |
 | No aparecen negocios recién creados | Estado `PENDIENTE` o caché | Revisa `estado_publicacion` en el Sheet o espera 30 s. |
+| `Has alcanzado el límite máximo de 5 negocios...` | El usuario ya tiene 5 filas en `Negocios` | Elimina uno desde `/mi-panel` para liberar cupo. |
+| `Faltan campos obligatorios: menu` o error de encabezados | Falta la columna Q1 `menu` | Agrega `menu` en Q1 (ver sección 4.1). |
+| Al eliminar responde 403 | El negocio pertenece a otro usuario | Solo el propietario (`id_usuario`) puede borrarlo. |
+| La fila desaparece pero la tarjeta sigue | Caché de 30 s en una instancia tibia | Recarga en unos segundos o usa `?refresh=true`. |
 | Angular dev no conecta a la API | Backend apagado / CORS | Arranca `npm run dev:backend` y revisa `CORS_ORIGIN`. |
 
 ---
@@ -437,7 +526,7 @@ Las variables de entorno se aplican en un **nuevo deployment**. Cambia una varia
 ## 12. Checklist de despliegue
 
 - [ ] Spreadsheet creado con pestañas `Usuarios` y `Negocios`.
-- [ ] Encabezados exactos en la fila 1.
+- [ ] Encabezados exactos en la fila 1, incluida la columna Q `menu`.
 - [ ] Service Account con Google Sheets API habilitada.
 - [ ] Sheet compartido con el `client_email` como Editor.
 - [ ] `.env` local completo y probado.
@@ -445,9 +534,12 @@ Las variables de entorno se aplican en un **nuevo deployment**. Cambia una varia
 - [ ] Proyecto importado en Vercel con Root Directory `./` y Framework `Other`.
 - [ ] Variables de entorno cargadas en Production/Preview/Development.
 - [ ] `/api/health` responde `200`.
-- [ ] Catálogo carga y los filtros funcionan.
+- [ ] Catálogo carga, los filtros funcionan y el menú se expande.
 - [ ] Registro y login devuelven JWT.
-- [ ] Registro de negocio crea fila en `Negocios`.
+- [ ] Registro de negocio crea fila en `Negocios` (con `menu`).
+- [ ] El panel muestra el cupo `X / 5` y bloquea la creación al llegar a 5.
+- [ ] Editar un negocio actualiza su fila y su tarjeta.
+- [ ] Eliminar un negocio propio borra físicamente la fila y responde 403 en negocios ajenos.
 
 ---
 

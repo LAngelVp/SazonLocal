@@ -4,6 +4,7 @@ const {
   getBusinessesByUser,
   createBusiness,
   updateBusiness,
+  deleteBusiness,
   getCacheStatus,
 } = require('../services/business.service');
 
@@ -48,6 +49,19 @@ const update = asyncHandler(async (req, res) => {
 });
 
 /**
+ * DELETE /api/businesses/:id
+ * Protegido. Solo el propietario puede eliminar; borra la fila del Sheet.
+ */
+const remove = asyncHandler(async (req, res) => {
+  const result = await deleteBusiness(req.params.id, req.user.id_usuario);
+  res.status(200).json({
+    message: 'Negocio eliminado correctamente.',
+    id_negocio: result.id_negocio,
+    nombre_negocio: result.nombre_negocio,
+  });
+});
+
+/**
  * GET /api/businesses/cache-status
  * Diagnóstico del caché en memoria (útil para depurar límites de Sheets).
  */
@@ -55,4 +69,4 @@ const cacheStatus = asyncHandler(async (_req, res) => {
   res.status(200).json(getCacheStatus());
 });
 
-module.exports = { list, mine, create, update, cacheStatus };
+module.exports = { list, mine, create, update, remove, cacheStatus };

@@ -3,12 +3,15 @@
  */
 const { env } = require('../config/env');
 const { BUSINESS_TYPES, FOOD_TYPES, PRICE_RANGES, SERVICES } = require('../config/businessOptions');
-const { readSheet, appendRecord, updateRecord } = require('./sheets.service');
+const { readSheet, appendRecord, updateRecord, deleteRecord } = require('./sheets.service');
 const { createTtlCache } = require('./cache.service');
 const { ApiError } = require('../utils/ApiError');
 const { generateId } = require('../utils/ids');
 const { cleanString, normalizePhone, normalizeText } = require('../utils/normalize');
 const { assertRequiredFields } = require('../utils/validators');
+
+/** Regla de negocio: máximo de negocios registrados por usuario. */
+const MAX_BUSINESSES_PER_USER = 5;
 
 const REQUIRED_FIELDS = [
   'nombre_negocio',
@@ -27,6 +30,7 @@ const TEXT_LIMITS = {
   localidad: 80,
   colonia_direccion: 200,
   descripcion: 700,
+  menu: 1500,
   horario: 160,
   url_imagen: 600,
   enlace_maps: 600,
@@ -68,6 +72,14 @@ function buildBusinessData(payload, { partial = false, existing = null } = {}) {
 
   if (!partial) {
     assertRequiredFields(source, REQUIRED_FIELDS);
+  }
+
+  if (source.menu !== undefined && source.menu !== null && String(source.menu).length > 1500) {
+    throw new ApiError(
+      400,
+      'El menú o lista de platillos no puede exceder los 1500 caracteres.',
+      'MENU_TOO_LONG'
+    );
   }
 
   const data = {};
@@ -134,6 +146,7 @@ function toPublicBusiness(record) {
     tipo_negocio: record.tipo_negocio,
     tipo_comida: record.tipo_comida,
     descripcion: record.descripcion,
+    menu: record.menu,
     rango_precios: record.rango_precios,
     horario: record.horario,
     whatsapp_telefono: record.whatsapp_telefono,
@@ -179,6 +192,19 @@ async function getBusinessesByUser(idUsuario) {
 async function createBusiness(idUsuario, payload) {
   if (!idUsuario) {
     throw new ApiError(401, 'Sesión inválida: no se encontró el usuario.', 'INVALID_TOKEN');
+  }
+
+  // Límite por propietario: se cuenta antes de insertar.
+  const rows = await readSheet('businesses');
+  const ownedCount = rows.filter((row) => row.data.id_usuario === idUsuario).length;
+
+  if (ownedCount >= MAX_BUSINESSES_PER_USER) {
+    throw new ApiError(
+      400,
+      `Has alcanzado el límite máximo de ${MAX_BUSINESSES_PER_USER} negocios registrados por usuario.`,
+      'BUSINESS_LIMIT_REACHED',
+      { limit: MAX_BUSINESSES_PER_USER, current: ownedCount }
+    );
   }
 
   const data = buildBusinessData(payload, { partial: false });
@@ -227,6 +253,28 @@ async function updateBusiness(idNegocio, idUsuario, payload) {
   return { ...toPublicBusiness(updatedRecord), id_usuario: updatedRecord.id_usuario };
 }
 
+/** Elimina un negocio validando propiedad y borrando la fila físicamente. */
+async function deleteBusiness(idNegocio, idUsuario) {
+  const rows = await readSheet('businesses');
+  const target = rows.find((row) => row.data.id_negocio === idNegocio);
+
+  if (!target) {
+    throw new ApiError(404, 'No encontramos el negocio indicado.', 'BUSINESS_NOT_FOUND');
+  }
+
+  if (target.data.id_usuario !== idUsuario) {
+    throw new ApiError(403, 'No tienes permisos para eliminar este negocio.', 'FORBIDDEN');
+  }
+
+  await deleteRecord('businesses', target.rowNumber);
+  approvedCache.clear();
+
+  return {
+    id_negocio: target.data.id_negocio,
+    nombre_negocio: target.data.nombre_negocio,
+  };
+}
+
 function clearApprovedCache() {
   approvedCache.clear();
 }
@@ -236,6 +284,7 @@ function getCacheStatus() {
 }
 
 module.exports = {
+  MAX_BUSINESSES_PER_USER,
   REQUIRED_FIELDS,
   buildBusinessData,
   toPublicBusiness,
@@ -243,6 +292,7 @@ module.exports = {
   getBusinessesByUser,
   createBusiness,
   updateBusiness,
+  deleteBusiness,
   clearApprovedCache,
   getCacheStatus,
 };

@@ -6,6 +6,7 @@ import { BusinessCardComponent } from './components/business-card/business-card.
 import { AuthModalComponent, AuthMode } from '../auth/auth-modal.component';
 import { BusinessService } from '../../core/services/business.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
 import {
   CatalogFilters,
   countActiveFilters,
@@ -39,6 +40,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
   readonly currentYear = new Date().getFullYear();
   readonly searchTerm = signal('');
@@ -91,6 +93,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             business.nombre_negocio,
             business.tipo_comida,
             business.descripcion,
+            business.menu,
             business.localidad,
             business.colonia_direccion,
             business.servicios,
@@ -163,6 +166,14 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   // ---------- CTA negocio ----------
   requestBusiness(): void {
+    if (this.auth.isAuthenticated() && this.businessService.limitReached()) {
+      this.toast.error(
+        `Has alcanzado el límite máximo de ${this.businessService.maxBusinesses} negocios registrados por usuario.`
+      );
+      void this.router.navigate(['/mi-panel']);
+      return;
+    }
+
     if (this.auth.isAuthenticated()) {
       void this.router.navigate(['/registrar-negocio']);
       return;

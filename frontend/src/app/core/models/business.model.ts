@@ -13,6 +13,7 @@ export interface Business {
   tipo_negocio: string;
   tipo_comida: string;
   descripcion: string;
+  menu: string;
   rango_precios: string;
   horario: string;
   whatsapp_telefono: string;
@@ -38,6 +39,7 @@ export type BusinessPreview = Pick<
   | 'tipo_negocio'
   | 'tipo_comida'
   | 'descripcion'
+  | 'menu'
   | 'rango_precios'
   | 'horario'
   | 'whatsapp_telefono'
