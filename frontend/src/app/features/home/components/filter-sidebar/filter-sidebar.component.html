@@ -1,0 +1,118 @@
+<section class="filters" aria-label="Filtros del catálogo">
+  <header class="filters__header">
+    <div class="filters__title-row">
+      <h2 class="filters__title">Filtros</h2>
+      <button class="filters__close" type="button" (click)="closed.emit()" aria-label="Cerrar filtros">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18M6 6l12 12" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+    @if (activeCount() > 0) {
+      <button class="filters__reset-link" type="button" (click)="reset()">Limpiar todo</button>
+    }
+  </header>
+
+  <!-- Localidad -->
+  <div class="filters__group">
+    <label class="filters__label" for="filter-localidad">Localidad</label>
+    <div class="select-wrap">
+      <select id="filter-localidad" class="select" [value]="filters().localidad" (change)="setLocalidad($event)">
+        <option value="">Todas las localidades</option>
+        @for (localidad of localidades(); track localidad) {
+          <option [value]="localidad">{{ localidad }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Tipo de negocio -->
+  <fieldset class="filters__group filters__group--bordered">
+    <legend class="filters__label">Tipo de negocio</legend>
+    <div class="check-list">
+      @for (type of businessTypes; track type) {
+        <label class="check" [class.is-active]="isActive('tipos', type)">
+          <input
+            type="checkbox"
+            class="check__input"
+            [checked]="isActive('tipos', type)"
+            (change)="toggle('tipos', type)"
+          />
+          <span class="check__box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="check__label">{{ type }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <!-- Tipo de comida -->
+  <fieldset class="filters__group filters__group--bordered">
+    <legend class="filters__label">Tipo de comida</legend>
+    <div class="chips">
+      @for (food of foodTypes; track food) {
+        <button
+          class="chip"
+          type="button"
+          [class.is-active]="isActive('comidas', food)"
+          [attr.aria-pressed]="isActive('comidas', food)"
+          (click)="toggle('comidas', food)"
+        >
+          {{ food }}
+        </button>
+      }
+    </div>
+  </fieldset>
+
+  <!-- Rango de precios -->
+  <fieldset class="filters__group filters__group--bordered">
+    <legend class="filters__label">Rango de precios</legend>
+    <div class="segmented" role="group" aria-label="Rango de precios">
+      @for (price of priceRanges; track price) {
+        <button
+          class="segmented__btn"
+          type="button"
+          [class.is-active]="isActive('precios', price)"
+          [attr.aria-pressed]="isActive('precios', price)"
+          (click)="toggle('precios', price)"
+        >
+          {{ price }}
+        </button>
+      }
+    </div>
+  </fieldset>
+
+  <!-- Servicios -->
+  <fieldset class="filters__group filters__group--bordered filters__group--last">
+    <legend class="filters__label">Servicios</legend>
+    <div class="service-list">
+      @for (service of services; track service) {
+        <label class="check check--service" [class.is-active]="isActive('servicios', service)">
+          <input
+            type="checkbox"
+            class="check__input"
+            [checked]="isActive('servicios', service)"
+            (change)="toggle('servicios', service)"
+          />
+          <span class="check__box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="check__label">{{ service }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <button class="btn btn--secondary btn--block filters__reset" type="button" (click)="reset()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M3 3v5h5" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    Restablecer filtros
+  </button>
+</section>

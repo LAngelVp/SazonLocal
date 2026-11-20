@@ -1,0 +1,223 @@
+<div class="page">
+  <app-navbar
+    [(search)]="searchTerm"
+    (authRequested)="openAuth($event)"
+    (businessRequested)="requestBusiness()"
+  />
+
+  <!-- ================= Hero ================= -->
+  <section class="hero">
+    <div class="hero__inner container">
+      <div class="hero__content">
+        <span class="hero__eyebrow">
+          <span class="hero__eyebrow-dot" aria-hidden="true"></span>
+          Directorio gastronómico local
+        </span>
+        <h1 class="hero__title">
+          Los mejores sabores,
+          <span class="hero__title-accent">a la vuelta de la esquina.</span>
+        </h1>
+        <p class="hero__text">
+          Descubre restaurantes, cafeterías, food trucks y cocinas locales. Filtra por lo que se te
+          antoja y contacta directo por WhatsApp.
+        </p>
+        <div class="hero__stats">
+          <div class="hero__stat">
+            <strong>{{ businesses().length }}</strong>
+            <span>negocios publicados</span>
+          </div>
+          <span class="hero__stat-divider" aria-hidden="true"></span>
+          <div class="hero__stat">
+            <strong>{{ localidades().length }}</strong>
+            <span>localidades</span>
+          </div>
+          <span class="hero__stat-divider" aria-hidden="true"></span>
+          <div class="hero__stat">
+            <strong>100%</strong>
+            <span>sabor local</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero__visual" aria-hidden="true">
+        <div class="hero__sun"></div>
+        <img src="assets/logo-icon.png" alt="" class="hero__mark" />
+        <span class="hero__float hero__float--one">Hecho con sazón</span>
+        <span class="hero__float hero__float--two">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11Z" stroke-linejoin="round" />
+            <circle cx="12" cy="10" r="2.5" />
+          </svg>
+          Cerca de ti
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Catálogo ================= -->
+  <div class="catalog-layout container">
+    <!-- Barra móvil de filtros -->
+    <div class="mobile-bar">
+      <button class="btn btn--secondary btn--sm mobile-bar__btn" type="button" (click)="openDrawer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M4 6h16M7 12h10M10 18h4" stroke-linecap="round" />
+        </svg>
+        Filtros
+        @if (activeFilterCount() > 0) {
+          <span class="mobile-bar__count">{{ activeFilterCount() }}</span>
+        }
+      </button>
+      <span class="mobile-bar__results">{{ filteredBusinesses().length }} resultados</span>
+    </div>
+
+    <!-- Sidebar escritorio -->
+    <aside class="sidebar">
+      <app-filter-sidebar
+        [localidades]="localidades()"
+        [(filters)]="filters"
+        (closed)="closeDrawer()"
+      />
+    </aside>
+
+    <!-- Drawer móvil -->
+    <div class="drawer" [class.is-open]="drawerOpen()">
+      <div class="drawer__backdrop" (click)="closeDrawer()"></div>
+      <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="Filtros del catálogo">
+        <app-filter-sidebar
+          [localidades]="localidades()"
+          [(filters)]="filters"
+          (closed)="closeDrawer()"
+        />
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <main class="catalog" id="catalogo">
+      <header class="catalog__head">
+        <div>
+          <h2 class="catalog__title">Negocios para descubrir</h2>
+          @if (loading() && businesses().length === 0) {
+            <p class="catalog__subtitle">Cargando el mejor sazón de tu zona…</p>
+          } @else {
+            <p class="catalog__subtitle">
+              {{ filteredBusinesses().length }}
+              {{ filteredBusinesses().length === 1 ? 'negocio encontrado' : 'negocios encontrados' }}
+              @if (searchTerm().trim()) {
+                para “{{ searchTerm().trim() }}”
+              }
+            </p>
+          }
+        </div>
+
+        @if (hasActiveFilters()) {
+          <button class="catalog__clear" type="button" (click)="resetFilters()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" stroke-linecap="round" />
+            </svg>
+            Quitar filtros
+          </button>
+        }
+      </header>
+
+      @if (loadError()) {
+        <div class="state state--error">
+          <span class="state__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v6M12 16.5v.5" stroke-linecap="round" />
+            </svg>
+          </span>
+          <h3>No pudimos cargar el directorio</h3>
+          <p>{{ loadError() }}</p>
+          <button class="btn btn--primary btn--sm" type="button" (click)="businessService.load(true)">
+            Reintentar
+          </button>
+        </div>
+      } @else if (loading() && businesses().length === 0) {
+        <div class="grid" aria-busy="true" aria-label="Cargando negocios">
+          @for (item of skeletons; track item) {
+            <div class="skeleton-card">
+              <div class="skeleton-card__media"></div>
+              <div class="skeleton-card__body">
+                <div class="skeleton-line skeleton-line--title"></div>
+                <div class="skeleton-line skeleton-line--short"></div>
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line skeleton-line--medium"></div>
+                <div class="skeleton-card__buttons">
+                  <div class="skeleton-line skeleton-line--button"></div>
+                  <div class="skeleton-line skeleton-line--button"></div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (filteredBusinesses().length === 0) {
+        <div class="state">
+          <span class="state__icon state__icon--soft">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.2-3.2" stroke-linecap="round" />
+              <path d="M8 11h6" stroke-linecap="round" />
+            </svg>
+          </span>
+          <h3>Sin resultados por ahora</h3>
+          <p>
+            @if (businesses().length === 0) {
+              Aún no hay negocios publicados. ¡Sé el primero en sumarte al directorio!
+            } @else {
+              No encontramos negocios con esos filtros. Prueba con otra búsqueda o restablece los
+              filtros.
+            }
+          </p>
+          <div class="state__actions">
+            @if (hasActiveFilters()) {
+              <button class="btn btn--primary btn--sm" type="button" (click)="resetFilters()">
+                Restablecer filtros
+              </button>
+            }
+            <button class="btn btn--secondary btn--sm" type="button" (click)="requestBusiness()">
+              Registrar mi negocio
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="grid">
+          @for (business of filteredBusinesses(); track business.id_negocio) {
+            <app-business-card [business]="business" />
+          }
+        </div>
+      }
+    </main>
+  </div>
+
+  <!-- ================= Footer ================= -->
+  <footer class="footer">
+    <div class="footer__inner container">
+      <div class="footer__brand">
+        <img src="assets/logo-horizontal.png" alt="SazónLocal" class="footer__logo" />
+        <p>El directorio que conecta a los negocios de comida local con su comunidad.</p>
+      </div>
+
+      <div class="footer__cta">
+        <p class="footer__cta-title">¿Tienes un negocio de comida?</p>
+        <p class="footer__cta-text">Publícalo gratis y llega a más clientes hoy mismo.</p>
+        <button class="btn btn--primary btn--sm" type="button" (click)="requestBusiness()">
+          Registrar negocio
+        </button>
+      </div>
+    </div>
+    <div class="footer__bottom container">
+      <span>© {{ currentYear }} SazónLocal. Directorio gastronómico local.</span>
+      <span>Hecho con sazón 🍲</span>
+    </div>
+  </footer>
+
+  <!-- ================= Modal de autenticación ================= -->
+  @if (authModalOpen()) {
+    <app-auth-modal
+      [(mode)]="authMode"
+      (closed)="closeAuth()"
+      (authenticated)="onAuthenticated($event)"
+    />
+  }
+</div>

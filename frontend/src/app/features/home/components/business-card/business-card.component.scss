@@ -1,0 +1,250 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-base), box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.card--preview {
+  box-shadow: var(--shadow-lg);
+}
+
+.card--preview:hover {
+  transform: none;
+}
+
+/* ---------- Imagen ---------- */
+.card__media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--color-bg-alt);
+  overflow: hidden;
+}
+
+.card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 600ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.card:hover .card__image {
+  transform: scale(1.04);
+}
+
+.card__placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 20% 15%, #fdece8 0%, #f7f5f2 45%, #f2efe9 100%);
+}
+
+.card__placeholder-logo {
+  width: 82px;
+  height: auto;
+  opacity: 0.55;
+  filter: grayscale(0.15);
+}
+
+.card__badges {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  right: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.badge--type {
+  background: rgba(28, 33, 38, 0.78);
+  color: #fff;
+}
+
+.badge--price {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ---------- Contenido ---------- */
+.card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex: 1;
+  padding: 1.1rem 1.15rem 1.15rem;
+}
+
+.card__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.card__title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card__food {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 0.55rem;
+  margin-top: 0.15rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-secondary-soft);
+  color: #97600f;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.card__location {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  min-width: 0;
+}
+
+.card__location svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--color-primary);
+}
+
+.card__location-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.card__dot {
+  margin-inline: 0.15rem;
+  color: var(--color-text-soft);
+}
+
+.card__description {
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  min-height: 2.9em;
+}
+
+.card__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+.card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.card__meta-item svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--color-text-soft);
+}
+
+.card__meta-item--price {
+  display: none;
+}
+
+.card__services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.card__service {
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.card__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.7rem;
+}
+
+.card__action {
+  min-height: 38px;
+  padding-inline: 0.6rem;
+  font-size: var(--fs-xs);
+  gap: 0.4rem;
+}
+
+.card__action svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.card__action.btn--primary:hover {
+  color: #fff;
+}

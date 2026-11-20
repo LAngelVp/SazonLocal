@@ -1,0 +1,457 @@
+<div class="page">
+  <header class="topbar">
+    <div class="topbar__inner container">
+      <a class="brand" routerLink="/" aria-label="SazónLocal, volver al catálogo">
+        <img src="assets/logo-horizontal.png" alt="SazónLocal" class="brand__logo" />
+      </a>
+      <a class="btn btn--ghost btn--sm back-link" routerLink="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M19 12H5M11 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Volver al catálogo
+      </a>
+    </div>
+  </header>
+
+  <main class="container form-layout">
+    @if (success(); as created) {
+      <!-- ================= Confirmación ================= -->
+      <section class="success-panel">
+        <span class="success-panel__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="eyebrow">¡Listo!</span>
+        <h1 class="success-panel__title">Tu negocio ya forma parte de SazónLocal</h1>
+        <p class="success-panel__text">
+          @if (created.estado_publicacion === 'APROBADO') {
+            <strong>{{ created.nombre_negocio }}</strong> ya está publicado y visible en el catálogo
+            para que más clientes lo descubran.
+          } @else {
+            <strong>{{ created.nombre_negocio }}</strong> quedó registrado. Nuestro equipo lo revisará
+            antes de publicarlo en el catálogo.
+          }
+        </p>
+
+        <div class="success-panel__card">
+          <app-business-card [business]="created" [preview]="true" />
+        </div>
+
+        <div class="success-panel__actions">
+          <a class="btn btn--primary" routerLink="/">Ver el catálogo</a>
+          <button class="btn btn--secondary" type="button" (click)="startAnother()">
+            Registrar otro negocio
+          </button>
+        </div>
+      </section>
+    } @else {
+      <!-- ================= Formulario ================= -->
+      <section class="form-panel">
+        <header class="page-head">
+          <span class="eyebrow">
+            <span class="eyebrow__dot" aria-hidden="true"></span>
+            Publicación gratuita
+          </span>
+          <h1 class="page-head__title">Registra tu negocio</h1>
+          <p class="page-head__text">
+            @if (auth.firstName()) {
+              Hola, <strong>{{ auth.firstName() }}</strong>. Completa la información y mira tu
+              tarjeta tomar forma en tiempo real.
+            } @else {
+              Completa la información y mira tu tarjeta tomar forma en tiempo real.
+            }
+          </p>
+        </header>
+
+        @if (errorMessage()) {
+          <div class="alert" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v6M12 16.5v.5" stroke-linecap="round" />
+            </svg>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
+        <form class="biz-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <!-- ---------- Sección 1 ---------- -->
+          <section class="form-section">
+            <header class="form-section__head">
+              <span class="form-section__step">1</span>
+              <div>
+                <h2 class="form-section__title">Información del negocio</h2>
+                <p class="form-section__text">Lo esencial para que te encuentren y se antojen.</p>
+              </div>
+            </header>
+
+            <div class="form-grid">
+              <div class="field field--full">
+                <label class="label" for="nombre_negocio">Nombre del negocio *</label>
+                <input
+                  id="nombre_negocio"
+                  class="input"
+                  type="text"
+                  formControlName="nombre_negocio"
+                  placeholder="Ej. Taquería El Buen Sazón"
+                  maxlength="120"
+                  [class.is-invalid]="isInvalid('nombre_negocio')"
+                />
+                @if (isInvalid('nombre_negocio')) {
+                  <span class="field-error">
+                    Escribe el nombre de tu negocio (mínimo 3 caracteres).
+                  </span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="label" for="localidad">Localidad *</label>
+                <input
+                  id="localidad"
+                  class="input"
+                  type="text"
+                  formControlName="localidad"
+                  placeholder="Ej. Zapopan"
+                  maxlength="80"
+                  [class.is-invalid]="isInvalid('localidad')"
+                />
+                @if (isInvalid('localidad')) {
+                  <span class="field-error">Indica tu localidad o municipio.</span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="label" for="colonia_direccion">Colonia y dirección *</label>
+                <input
+                  id="colonia_direccion"
+                  class="input"
+                  type="text"
+                  formControlName="colonia_direccion"
+                  placeholder="Ej. Col. Americana, Av. Hidalgo 123"
+                  maxlength="200"
+                  [class.is-invalid]="isInvalid('colonia_direccion')"
+                />
+                @if (isInvalid('colonia_direccion')) {
+                  <span class="field-error">Indica la colonia y dirección del negocio.</span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="label" for="tipo_negocio">Tipo de negocio *</label>
+                <select
+                  id="tipo_negocio"
+                  class="select"
+                  formControlName="tipo_negocio"
+                  [class.is-invalid]="isInvalid('tipo_negocio')"
+                >
+                  <option value="" disabled>Selecciona una opción</option>
+                  @for (type of businessTypes; track type) {
+                    <option [value]="type">{{ type }}</option>
+                  }
+                </select>
+                @if (isInvalid('tipo_negocio')) {
+                  <span class="field-error">Selecciona el tipo de negocio.</span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="label" for="tipo_comida">Tipo de comida *</label>
+                <select
+                  id="tipo_comida"
+                  class="select"
+                  formControlName="tipo_comida"
+                  [class.is-invalid]="isInvalid('tipo_comida')"
+                >
+                  <option value="" disabled>Selecciona una opción</option>
+                  @for (food of foodTypes; track food) {
+                    <option [value]="food">{{ food }}</option>
+                  }
+                </select>
+                @if (isInvalid('tipo_comida')) {
+                  <span class="field-error">Selecciona el tipo de comida.</span>
+                }
+              </div>
+
+              <div class="field field--full">
+                <div class="label-row">
+                  <label class="label" for="descripcion">Descripción *</label>
+                  <span class="counter">{{ form.controls.descripcion.value.length }}/700</span>
+                </div>
+                <textarea
+                  id="descripcion"
+                  class="textarea"
+                  formControlName="descripcion"
+                  maxlength="700"
+                  placeholder="Cuéntanos qué hace especial a tu negocio: platillos estrella, ingredientes, ambiente…"
+                  [class.is-invalid]="isInvalid('descripcion')"
+                ></textarea>
+                @if (isInvalid('descripcion')) {
+                  <span class="field-error">
+                    La descripción debe tener entre 20 y 700 caracteres.
+                  </span>
+                } @else {
+                  <span class="field-hint">Mínimo 20 caracteres. Aparecerá en tu tarjeta.</span>
+                }
+              </div>
+
+              <div class="field field--full">
+                <label class="label">Rango de precios *</label>
+                <div class="segmented segmented--wide" role="group" aria-label="Rango de precios">
+                  @for (price of priceRanges; track price) {
+                    <button
+                      class="segmented__btn"
+                      type="button"
+                      [class.is-active]="form.controls.rango_precios.value === price"
+                      [attr.aria-pressed]="form.controls.rango_precios.value === price"
+                      (click)="setPrice(price)"
+                    >
+                      <span class="segmented__symbol">{{ price }}</span>
+                      <span class="segmented__label">{{ priceLabels[price] }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ---------- Sección 2 ---------- -->
+          <section class="form-section">
+            <header class="form-section__head">
+              <span class="form-section__step">2</span>
+              <div>
+                <h2 class="form-section__title">Contacto y ubicación</h2>
+                <p class="form-section__text">Para que tus clientes lleguen y te escriban directo.</p>
+              </div>
+            </header>
+
+            <div class="form-grid">
+              <div class="field">
+                <label class="label" for="whatsapp_telefono">WhatsApp *</label>
+                <input
+                  id="whatsapp_telefono"
+                  class="input"
+                  type="tel"
+                  formControlName="whatsapp_telefono"
+                  placeholder="Ej. 5213312345678"
+                  maxlength="20"
+                  [class.is-invalid]="isInvalid('whatsapp_telefono')"
+                />
+                @if (isInvalid('whatsapp_telefono')) {
+                  <span class="field-error">Ingresa entre 10 y 15 dígitos, con lada del país.</span>
+                } @else {
+                  <span class="field-hint">Incluye lada del país. Ej. 52 para México.</span>
+                }
+              </div>
+
+              <div class="field">
+                <label class="label" for="horario">Horario *</label>
+                <input
+                  id="horario"
+                  class="input"
+                  type="text"
+                  formControlName="horario"
+                  placeholder="Ej. Lun a Sáb, 9:00 – 21:00"
+                  maxlength="160"
+                  [class.is-invalid]="isInvalid('horario')"
+                />
+                @if (isInvalid('horario')) {
+                  <span class="field-error">Indica los días y horas de atención.</span>
+                }
+              </div>
+
+              <div class="field field--full">
+                <label class="label" for="enlace_maps">
+                  Enlace de Google Maps <span class="label__optional">(recomendado)</span>
+                </label>
+                <input
+                  id="enlace_maps"
+                  class="input"
+                  type="url"
+                  formControlName="enlace_maps"
+                  placeholder="https://maps.app.goo.gl/..."
+                  [class.is-invalid]="isInvalid('enlace_maps')"
+                />
+                @if (isInvalid('enlace_maps')) {
+                  <span class="field-error">El enlace debe iniciar con https://.</span>
+                } @else {
+                  <span class="field-hint">
+                    En Google Maps: Compartir → Copiar enlace. Si lo dejas vacío, crearemos una
+                    búsqueda con tu dirección.
+                  </span>
+                }
+              </div>
+            </div>
+          </section>
+
+          <!-- ---------- Sección 3 ---------- -->
+          <section class="form-section">
+            <header class="form-section__head">
+              <span class="form-section__step">3</span>
+              <div>
+                <h2 class="form-section__title">Imagen principal</h2>
+                <p class="form-section__text">Una buena foto multiplica las ganas de visitarte.</p>
+              </div>
+            </header>
+
+            <div class="field">
+              <label class="label" for="url_imagen">URL de la imagen</label>
+              <div class="image-input">
+                <input
+                  id="url_imagen"
+                  class="input"
+                  type="url"
+                  formControlName="url_imagen"
+                  placeholder="https://i.ibb.co/…/mi-negocio.jpg"
+                  [class.is-invalid]="isInvalid('url_imagen')"
+                />
+                @if (imageUrl()) {
+                  <button class="image-input__clear" type="button" (click)="clearImage()" aria-label="Quitar imagen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18 6 6 18M6 6l12 12" stroke-linecap="round" />
+                    </svg>
+                  </button>
+                }
+              </div>
+              @if (isInvalid('url_imagen')) {
+                <span class="field-error">La URL debe iniciar con http:// o https://.</span>
+              }
+            </div>
+
+            <div class="image-tools">
+              <label class="btn btn--secondary btn--sm upload-btn" [class.is-disabled]="uploading()">
+                @if (uploading()) {
+                  <span class="spinner spinner--dark" aria-hidden="true"></span>
+                  Subiendo…
+                } @else {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 16V4m0 0 4 4m-4-4L8 8" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" />
+                  </svg>
+                  Subir imagen
+                }
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  class="upload-btn__input"
+                  [disabled]="uploading()"
+                  (change)="onImageSelected($event)"
+                />
+              </label>
+              <span class="image-tools__hint">
+                o pega un enlace público. La subida directa es opcional y usa ImgBB.
+              </span>
+            </div>
+
+            @if (imageUploadError()) {
+              <p class="upload-error">{{ imageUploadError() }}</p>
+            }
+
+            <p class="field-hint">Formatos JPG, PNG, WebP o GIF · máximo 5 MB · proporción 16:9.</p>
+          </section>
+
+          <!-- ---------- Sección 4 ---------- -->
+          <section class="form-section">
+            <header class="form-section__head">
+              <span class="form-section__step">4</span>
+              <div>
+                <h2 class="form-section__title">Servicios disponibles</h2>
+                <p class="form-section__text">Selecciona todas las opciones que ofreces.</p>
+              </div>
+            </header>
+
+            <div class="service-options">
+              @for (service of services; track service) {
+                <button
+                  class="service-option"
+                  type="button"
+                  [class.is-active]="isServiceSelected(service)"
+                  [attr.aria-pressed]="isServiceSelected(service)"
+                  (click)="toggleService(service)"
+                >
+                  <span class="service-option__icon" aria-hidden="true">
+                    @switch (service) {
+                      @case ('Comedor') {
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                          <path d="M4 11h16M6 11V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3M5 11v6M19 11v6M8 17v2M16 17v2" stroke-linecap="round" />
+                        </svg>
+                      }
+                      @case ('Para llevar') {
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                          <path d="M5 8h14l-1 11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 8Z" stroke-linejoin="round" />
+                          <path d="M9 8V6a3 3 0 0 1 6 0v2M9 12v5M15 12v5" stroke-linecap="round" />
+                        </svg>
+                      }
+                      @default {
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                          <path d="M3 6h11v9H3zM14 9h4l3 3v3h-7z" stroke-linejoin="round" />
+                          <circle cx="7" cy="18" r="2" />
+                          <circle cx="17" cy="18" r="2" />
+                        </svg>
+                      }
+                    }
+                  </span>
+                  <span class="service-option__text">
+                    <strong>{{ service }}</strong>
+                    <span>
+                      @switch (service) {
+                        @case ('Comedor') { Espacio para comer en el lugar }
+                        @case ('Para llevar') { Recoge tu pedido sin esperar mesa }
+                        @default { Entrega a domicilio en tu zona }
+                      }
+                    </span>
+                  </span>
+                  <span class="service-option__check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+              }
+            </div>
+          </section>
+
+          <!-- ---------- Envío ---------- -->
+          <div class="submit-bar">
+            <p class="submit-bar__note">
+              Los campos con * son obligatorios. Al enviar aceptas que la información sea visible
+              en el directorio.
+            </p>
+            <button class="btn btn--primary btn--lg submit-bar__btn" type="submit" [disabled]="submitting()">
+              @if (submitting()) {
+                <span class="spinner" aria-hidden="true"></span>
+                Publicando…
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M20 4 3 11l7 2 2 7 8-16Z" stroke-linejoin="round" />
+                </svg>
+                Publicar mi negocio
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ================= Previsualización ================= -->
+      <aside class="preview-panel" aria-label="Vista previa de tu tarjeta">
+        <div class="preview-panel__head">
+          <h2 class="preview-panel__title">Vista previa</h2>
+          <span class="preview-panel__badge">
+            <span class="preview-panel__pulse" aria-hidden="true"></span>
+            En vivo
+          </span>
+        </div>
+
+        <app-business-card [business]="preview()" [preview]="true" />
+
+        <div class="preview-panel__tips">
+          <p class="preview-panel__tips-title">Tips para una gran ficha</p>
+          <ul>
+            <li>Usa una foto horizontal, bien iluminada y de tu platillo estrella.</li>
+            <li>Escribe una descripción concreta: qué vendes y qué te hace único.</li>
+            <li>Confirma tu WhatsApp con lada del país para recibir pedidos.</li>
+          </ul>
+        </div>
+      </aside>
+    }
+  </main>
+</div>
